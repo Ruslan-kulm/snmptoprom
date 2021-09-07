@@ -15,7 +15,7 @@ func TrapHandler(rawTraps <-chan IntStatuTrap, handledTraps chan<- IntStatuTrap,
 			Port:      161,
 			Community: cfg.TrapHandler.Community,
 			Version:   g.Version2c,
-			Timeout:   time.Duration(3) * time.Second,
+			Timeout:   time.Duration(10) * time.Second,
 		}
 
 		conn_err := params.Connect()

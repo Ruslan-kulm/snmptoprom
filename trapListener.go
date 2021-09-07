@@ -6,6 +6,8 @@ import (
 	"net"
 )
 
+const interfaceStatus = ".1.3.6.1.6.3.1.1.5"
+
 func CreateTrapListener(th g.TrapHandlerFunc, cfg Config) {
 	tl := g.NewTrapListener()
 	tl.OnNewTrap = th
@@ -19,7 +21,7 @@ func CreateTrapListener(th g.TrapHandlerFunc, cfg Config) {
 func onNewTrap(rawTraps chan<- IntStatuTrap) func(packet *g.SnmpPacket, addr *net.UDPAddr) {
 	return func(packet *g.SnmpPacket, addr *net.UDPAddr) {
 		switch packet.Enterprise {
-		case ".1.3.6.1.6.3.1.1.5":
+		case interfaceStatus:
 			interfaceName := string(packet.Variables[1].Value.([]byte))
 			interfaceStatus := string(packet.Variables[3].Value.([]byte))
 

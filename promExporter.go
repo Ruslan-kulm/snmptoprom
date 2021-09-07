@@ -7,11 +7,25 @@ import (
 
 func WebServer(rawTraps <-chan IntStatuTrap) {
 
-	opsQueued := prometheus.NewGaugeVec(
+	curIntStatu := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "AO",
 			Subsystem: "network",
 			Name:      "interface_status",
+			Help:      "Interface status oh network devices in AO",
+		},
+		[]string{
+			"hostname",
+			"interface",
+		},
+	)
+	prometheus.MustRegister(curIntStatu)
+
+	sumIntStatu := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "AO",
+			Subsystem: "network",
+			Name:      "interface_status_changes",
 			Help:      "Interface status changes oh network devices in AO",
 		},
 		[]string{
@@ -19,7 +33,7 @@ func WebServer(rawTraps <-chan IntStatuTrap) {
 			"interface",
 		},
 	)
-	prometheus.MustRegister(opsQueued)
+	prometheus.MustRegister(sumIntStatu)
 
 	for trap := range rawTraps {
 		status := 0.0
@@ -27,7 +41,8 @@ func WebServer(rawTraps <-chan IntStatuTrap) {
 			status = 1.0
 		}
 
-		opsQueued.WithLabelValues(trap.DeviceName, trap.InterfaceName).Set(status)
+		curIntStatu.WithLabelValues(trap.DeviceName, trap.InterfaceName).Set(status)
+		sumIntStatu.WithLabelValues(trap.DeviceName, trap.InterfaceName).Inc()
 	}
 
 }
