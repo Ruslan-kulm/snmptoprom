@@ -4,7 +4,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
 	"net"
-	"net/http"пше ыефегы
+	"net/http"
 )
 
 type IntStatuTrap struct {
