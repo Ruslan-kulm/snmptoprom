@@ -24,7 +24,6 @@ func onNewTrap(rawTraps chan<- IntStatuTrap) func(packet *g.SnmpPacket, addr *ne
 		case interfaceStatus:
 			interfaceName := string(packet.Variables[1].Value.([]byte))
 			interfaceStatus := string(packet.Variables[3].Value.([]byte))
-
 			t := IntStatuTrap{
 				DeviceName:      "",
 				IpAddr:          addr.IP,

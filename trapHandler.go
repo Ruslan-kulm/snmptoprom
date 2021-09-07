@@ -20,19 +20,25 @@ func TrapHandler(rawTraps <-chan IntStatuTrap, handledTraps chan<- IntStatuTrap,
 
 		conn_err := params.Connect()
 		if conn_err != nil {
-			log.Fatalf("Connect() err: %v", conn_err)
+			log.Printf("Cann't conntct to %s, erro: %v", trap.IpAddr.String(), conn_err)
 		}
 		defer func() {
 			close_err := params.Conn.Close()
-			log.Fatalf("Get() err: %v", close_err)
+			if close_err != nil {
+				log.Printf("Can't close connection to %s, error: %v", trap.IpAddr.String(), close_err)
+			}
 		}()
 
+		hostName := ""
 		oids := []string{hostNameOID}
-		result, get_err := params.Get(oids) // Get() accepts up to g.MAX_OIDS
+		result, get_err := params.Get(oids)
 		if get_err != nil {
-			log.Fatalf("Get() err: %v", get_err)
+			log.Printf("Can't fetch hostname for %s, use ip addres instead error: %v", trap.IpAddr.String(), get_err)
+			hostName = trap.IpAddr.String()
+
+		} else {
+			hostName = string(result.Variables[0].Value.([]byte))
 		}
-		hostName := string(result.Variables[0].Value.([]byte))
 		trap.DeviceName = hostName
 		handledTraps <- trap
 
