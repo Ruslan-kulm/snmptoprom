@@ -15,7 +15,7 @@ func TrapHandler(rawTraps <-chan IntStatuTrap, handledTraps chan<- IntStatuTrap,
 			Port:      161,
 			Community: cfg.TrapHandler.Community,
 			Version:   g.Version2c,
-			Timeout:   time.Duration(10) * time.Second,
+			Timeout:   time.Duration(3) * time.Second,
 		}
 
 		conn_err := params.Connect()
@@ -25,7 +25,7 @@ func TrapHandler(rawTraps <-chan IntStatuTrap, handledTraps chan<- IntStatuTrap,
 		defer func() {
 			close_err := params.Conn.Close()
 			if close_err != nil {
-				log.Printf("Can't close connection to %s, error: %v", trap.IpAddr.String(), close_err)
+				log.Printf("Can't close connection to %s,. Error: %v", trap.IpAddr.String(), close_err)
 			}
 		}()
 
