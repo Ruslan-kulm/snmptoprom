@@ -2,10 +2,11 @@ package main
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 	"strings"
 )
 
-func WebServer(rawTraps <-chan IntStatuTrap) {
+func WebServer(rawTraps <-chan IntStatuTrap, ctx *Context) {
 
 	curIntStatu := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -43,6 +44,8 @@ func WebServer(rawTraps <-chan IntStatuTrap) {
 
 		curIntStatu.WithLabelValues(trap.DeviceName, trap.InterfaceName).Set(status)
 		sumIntStatu.WithLabelValues(trap.DeviceName, trap.InterfaceName).Inc()
+		ctx.logger.WithFields(logrus.Fields{
+			"id": trap.Id,
+		}).Debug("Metrics updated")
 	}
-
 }

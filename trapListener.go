@@ -1,38 +1,60 @@
 package main
 
 import (
+	"github.com/google/uuid"
 	g "github.com/gosnmp/gosnmp"
-	"log"
+	"github.com/sirupsen/logrus"
 	"net"
+	"os"
 )
 
 const interfaceStatus = ".1.3.6.1.6.3.1.1.5"
 
-func CreateTrapListener(th g.TrapHandlerFunc, cfg Config) {
+func CreateTrapListener(th g.TrapHandlerFunc, ctx *Context) {
+	ctx.logger.Debug("TrapListener is preparing")
 	tl := g.NewTrapListener()
 	tl.OnNewTrap = th
 	tl.Params = g.Default
-	err := tl.Listen("0.0.0.0:" + cfg.TrapListener.Port)
+	ctx.logger.Debug("TrapListener is prepared. Listening", "0.0.0.0:"+ctx.config.TrapListener.Port)
+	err := tl.Listen("0.0.0.0:" + ctx.config.TrapListener.Port)
 	if err != nil {
-		log.Panicf("error in listen: %s", err)
+		ctx.logger.WithFields(logrus.Fields{
+			"error": err,
+		}).Error("error on listen ", "0.0.0.0:"+ctx.config.TrapListener.Port)
+		os.Exit(1)
 	}
 }
 
-func onNewTrap(rawTraps chan<- IntStatuTrap) func(packet *g.SnmpPacket, addr *net.UDPAddr) {
+func onNewTrap(rawTraps chan<- IntStatuTrap, ctx *Context) func(packet *g.SnmpPacket, addr *net.UDPAddr) {
 	return func(packet *g.SnmpPacket, addr *net.UDPAddr) {
+		id := uuid.New()
+		ctx.logger.WithFields(logrus.Fields{
+			"id":       id,
+			"trapBody": packet,
+		}).Debug("A new trap received")
+
 		switch packet.Enterprise {
 		case interfaceStatus:
 			interfaceName := string(packet.Variables[1].Value.([]byte))
 			interfaceStatus := string(packet.Variables[3].Value.([]byte))
 			t := IntStatuTrap{
+				Id:              id,
 				DeviceName:      "",
 				IpAddr:          addr.IP,
 				InterfaceName:   interfaceName,
 				InterfaceStatus: interfaceStatus,
 			}
+			ctx.logger.WithFields(logrus.Fields{
+				"id":        t.Id,
+				"ip":        t.IpAddr,
+				"interface": t.InterfaceName,
+				"status":    t.InterfaceStatus,
+			}).Debug("Interface Status trap initialized")
+
 			rawTraps <- t
+
 		default:
-			log.Printf("got trapdata from %s\n", packet.Enterprise)
+			ctx.logger.Debug("Unsupported trap ", packet.Enterprise)
 		}
 	}
 }

@@ -2,45 +2,64 @@ package main
 
 import (
 	g "github.com/gosnmp/gosnmp"
-	"log"
+	"github.com/sirupsen/logrus"
 	"time"
 )
 
 const hostNameOID = "1.3.6.1.4.1.9.2.1.3.0"
 
-func TrapHandler(rawTraps <-chan IntStatuTrap, handledTraps chan<- IntStatuTrap, cfg Config) {
+func TrapHandler(rawTraps <-chan IntStatuTrap, handledTraps chan<- IntStatuTrap, ctx *Context) {
 	for trap := range rawTraps {
+		ctx.logger.WithFields(logrus.Fields{
+			"id": trap.Id,
+		}).Debug("Trying to get hostname for ", trap.IpAddr)
 		params := &g.GoSNMP{
 			Target:    trap.IpAddr.String(),
 			Port:      161,
-			Community: cfg.TrapHandler.Community,
+			Community: ctx.config.TrapHandler.Community,
 			Version:   g.Version2c,
 			Timeout:   time.Duration(3) * time.Second,
 		}
 
-		conn_err := params.Connect()
-		if conn_err != nil {
-			log.Printf("Cann't conntct to %s, erro: %v", trap.IpAddr.String(), conn_err)
+		err := params.Connect()
+		if err != nil {
+			ctx.logger.WithFields(logrus.Fields{
+				"error": err,
+			}).Error("Cann't connect to ", trap.IpAddr.String())
 		}
-		defer func() {
-			close_err := params.Conn.Close()
-			if close_err != nil {
-				log.Printf("Can't close connection to %s,. Error: %v", trap.IpAddr.String(), close_err)
-			}
-		}()
+
+		ctx.logger.WithFields(logrus.Fields{
+			"id": trap.Id,
+		}).Debug("Conneted to device ", trap.IpAddr)
 
 		hostName := ""
 		oids := []string{hostNameOID}
-		result, get_err := params.Get(oids)
-		if get_err != nil {
-			log.Printf("Can't fetch hostname for %s, use ip addres instead error: %v", trap.IpAddr.String(), get_err)
+		result, err := params.Get(oids)
+		if err != nil {
+			ctx.logger.WithFields(logrus.Fields{
+				"error": err,
+			}).Error("Can't fetch hostname for %s, use ip address instead", trap.IpAddr.String())
 			hostName = trap.IpAddr.String()
 
 		} else {
+			ctx.logger.WithFields(logrus.Fields{
+				"id":     trap.Id,
+				"result": result,
+			}).Debug("Got the answer")
 			hostName = string(result.Variables[0].Value.([]byte))
+			ctx.logger.WithFields(logrus.Fields{
+				"id":     trap.Id,
+				"result": result,
+			}).Debug("Hostname is ", hostName)
 		}
 		trap.DeviceName = hostName
 		handledTraps <- trap
 
+		err = params.Conn.Close()
+		if err != nil {
+			ctx.logger.WithFields(logrus.Fields{
+				"error": err,
+			}).Error("Can't close connection to ", trap.IpAddr.String())
+		}
 	}
 }
