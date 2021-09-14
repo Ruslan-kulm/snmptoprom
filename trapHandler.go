@@ -18,7 +18,7 @@ func TrapHandler(rawTraps <-chan IntStatuTrap, handledTraps chan<- IntStatuTrap,
 			Port:      161,
 			Community: ctx.config.TrapHandler.Community,
 			Version:   g.Version2c,
-			Timeout:   time.Duration(3) * time.Second,
+			Timeout:   time.Duration(10) * time.Second,
 		}
 
 		err := params.Connect()
@@ -35,7 +35,7 @@ func TrapHandler(rawTraps <-chan IntStatuTrap, handledTraps chan<- IntStatuTrap,
 		hostName := ""
 		oids := []string{hostNameOID}
 		result, err := params.Get(oids)
-		if err != nil {
+		if err != nil || result.Variables[0].Value == nil {
 			ctx.logger.WithFields(logrus.Fields{
 				"error": err,
 			}).Error("Can't fetch hostname for %s, use ip address instead", trap.IpAddr.String())
