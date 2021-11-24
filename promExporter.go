@@ -1,14 +1,18 @@
 package main
 
 import (
+	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"strings"
 )
 
-func WebServer(rawTraps <-chan IntStatuTrap, ctx *Context) {
+var curIntStatu *prometheus.GaugeVec
+var sumIntStatu *prometheus.GaugeVec
 
-	curIntStatu := prometheus.NewGaugeVec(
+func CreateMetrics() {
+	fmt.Printf("CreateMetrics \n")
+	curIntStatu = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "AO",
 			Subsystem: "network",
@@ -22,7 +26,7 @@ func WebServer(rawTraps <-chan IntStatuTrap, ctx *Context) {
 	)
 	prometheus.MustRegister(curIntStatu)
 
-	sumIntStatu := prometheus.NewGaugeVec(
+	sumIntStatu = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "AO",
 			Subsystem: "network",
@@ -36,16 +40,19 @@ func WebServer(rawTraps <-chan IntStatuTrap, ctx *Context) {
 	)
 	prometheus.MustRegister(sumIntStatu)
 
-	for trap := range rawTraps {
-		status := 0.0
-		if strings.Contains(trap.InterfaceStatus, "up") {
-			status = 1.0
-		}
+	fmt.Printf("CreateMetrics Done \n")
+}
 
-		curIntStatu.WithLabelValues(trap.DeviceName, trap.InterfaceName).Set(status)
-		sumIntStatu.WithLabelValues(trap.DeviceName, trap.InterfaceName).Inc()
-		ctx.logger.WithFields(logrus.Fields{
-			"id": trap.Id,
-		}).Debug("Metrics updated")
+func UpdateIntStatuMetrics(trap IntStatuTrap, ctx *Context) {
+	status := 0.0
+	if strings.Contains(trap.InterfaceStatus, "up") {
+		status = 1.0
 	}
+
+	curIntStatu.WithLabelValues(trap.DeviceName, trap.InterfaceName).Set(status)
+	sumIntStatu.WithLabelValues(trap.DeviceName, trap.InterfaceName).Inc()
+	ctx.logger.WithFields(logrus.Fields{
+		"id": trap.Id,
+	}).Debug("Metrics updated")
+
 }

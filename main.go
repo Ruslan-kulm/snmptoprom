@@ -31,13 +31,9 @@ func Init() *Context {
 func main() {
 	ctx := Init()
 
-	rawTraps := make(chan IntStatuTrap, 1000)
-	handledTraps := make(chan IntStatuTrap, 1000)
-
-	trapListener := onNewTrap(rawTraps, ctx)
-	go CreateTrapListener(trapListener, ctx)
-	go TrapHandler(rawTraps, handledTraps, ctx)
-	go WebServer(handledTraps, ctx)
+	CreateMetrics()
+	trapListener := onNewTrap(ctx)
+	go TrapListen(trapListener, ctx)
 
 	http.Handle("/metrics", promhttp.Handler())
 	ctx.logger.Info("Listening %s", ":"+ctx.config.PromExporter.PromPort)

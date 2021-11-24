@@ -10,7 +10,7 @@ import (
 
 const interfaceStatus = ".1.3.6.1.6.3.1.1.5"
 
-func CreateTrapListener(th g.TrapHandlerFunc, ctx *Context) {
+func TrapListen(th g.TrapHandlerFunc, ctx *Context) {
 	ctx.logger.Debug("TrapListener is preparing")
 	tl := g.NewTrapListener()
 	tl.OnNewTrap = th
@@ -25,7 +25,7 @@ func CreateTrapListener(th g.TrapHandlerFunc, ctx *Context) {
 	}
 }
 
-func onNewTrap(rawTraps chan<- IntStatuTrap, ctx *Context) func(packet *g.SnmpPacket, addr *net.UDPAddr) {
+func onNewTrap(ctx *Context) func(packet *g.SnmpPacket, addr *net.UDPAddr) {
 	return func(packet *g.SnmpPacket, addr *net.UDPAddr) {
 		id := uuid.New()
 		ctx.logger.WithFields(logrus.Fields{
@@ -51,7 +51,7 @@ func onNewTrap(rawTraps chan<- IntStatuTrap, ctx *Context) func(packet *g.SnmpPa
 				"status":    t.InterfaceStatus,
 			}).Debug("Interface Status trap initialized")
 
-			rawTraps <- t
+			go IntStatuTrapHandler(t, ctx)
 
 		default:
 			ctx.logger.Debug("Unsupported trap ", packet.Enterprise)
